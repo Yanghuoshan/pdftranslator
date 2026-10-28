@@ -8,6 +8,7 @@ const state = {
   fontSize: parseInt(localStorage.getItem('fs') || '17', 10),
   busy: false,
   batchRunning: false,
+  status: null,
 };
 
 const apiPage = (n) => n + 1;
@@ -40,11 +41,14 @@ async function init() {
   document.documentElement.style.setProperty('--ratio', (m.page_size[0] / m.page_size[1]).toFixed(4));
   applyFont();
 
-  if (m.backend !== 'api') {
+  if (m.backend === 'agent') {
+    $('batchBtn').title = '按页顺序逐页拉起一次性 agent 翻译剩余页面；可随时停止，不常驻';
+    $('keyHint').textContent = '← → 翻页 · T 用一次性 agent 翻译本页 · B 逐页翻译全书';
+  } else if (m.backend !== 'api') {
     $('batchBtn').disabled = true;
-    $('batchBtn').textContent = '后台批翻（仅 API 模式）';
-    $('batchBtn').title = 'agent 模式下请在 agent 对话里用 next/save 循环；网页按 T 只翻当前页';
-    $('keyHint').textContent = '← → 翻页 · T 用一次性 agent 翻译本页 · 译文自动落盘';
+    $('batchBtn').textContent = '一键翻译全书（只读）';
+    $('batchBtn').title = '没有可用的翻译后端；配置 agent.command 或设置 TRANSLATE_API_KEY';
+    $('keyHint').textContent = '← → 翻页 · 当前为只读模式';
   }
 
   const saved = parseInt(localStorage.getItem('page:' + m.title) || '0', 10);
@@ -223,15 +227,25 @@ function hideLoading() {
 
 // ---------- 批翻与状态 ----------
 async function toggleBatch() {
-  if (!state.meta || state.meta.backend !== 'api') return;
+  if (!state.meta || !['api', 'agent'].includes(state.meta.backend)) return;
   if (state.batchRunning) {
     await post('/api/batch', { stop: true });
     state.batchRunning = false;
     return;
   }
-  const r = await post('/api/batch', { from: 1 });
-  if (r.started) state.batchRunning = true;
-  else if (r.reason === 'nothing_to_do') $('statusText').textContent = '没有需要翻译的页';
+  if (state.meta.backend === 'agent') {
+    const left = state.status && state.status.remaining != null
+      ? `${state.status.remaining} 页`
+      : '剩余页面';
+    if (!confirm(`将按页顺序逐页拉起一次性 agent 翻译${left}，可能耗时较长并消耗较多 token。\n翻译过程中可随时停止。确定开始？`)) return;
+  }
+  try {
+    const r = await post('/api/batch', { from: 1 });
+    if (r.started) state.batchRunning = true;
+    else if (r.reason === 'nothing_to_do') $('statusText').textContent = '没有需要翻译的页';
+  } catch (err) {
+    alert('启动失败：' + err.message);
+  }
 }
 
 async function refreshStatus() {
@@ -241,16 +255,18 @@ async function refreshStatus() {
   } catch (e) {
     return;
   }
+  state.status = s;
   state.batchRunning = s.batch.running;
-  if (s.backend === 'api') {
+  if (s.backend === 'api' || s.backend === 'agent') {
     $('batchBtn').textContent = s.batch.running
-      ? `停止批翻 (${s.batch.done}/${s.batch.total})`
-      : '后台翻译全书 (B)';
+      ? `停止翻译 (${s.batch.done}/${s.batch.total})`
+      : (s.backend === 'agent' ? '一键翻译全书 (B)' : '后台翻译全书 (B)');
   }
 
   const tips = [`已译 ${s.translated}/${s.pages}`];
   if (s.skipped) tips.push(`跳过 ${s.skipped}`);
   if (s.empty_pages) tips.push(`空页 ${s.empty_pages}`);
+  if (s.batch.running && s.batch.current) tips.push(`批翻第 ${s.batch.current} 页`);
   if (s.in_flight.length) tips.push(`进行中 ${s.in_flight.length}`);
   if (s.stats && s.stats.requests) tips.push(`${s.stats.requests} 次请求 / ${s.stats.tokens} tokens`);
   $('statusText').textContent = tips.join(' · ');

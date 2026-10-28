@@ -176,7 +176,7 @@ uv run pdftranslator export --out book.zh.md --mode bilingual --json
 uv run pdftranslator serve --no-browser      # 默认 http://127.0.0.1:8765/
 ```
 
-- **agent 模式**（配置了 `agent.command`）：切页、切中文**不会**自动翻译；只有按 `T` 才按需拉起一次 agent 子进程翻译当前页，完成即退出，不常驻、空闲不花 token。后台批翻按钮禁用。
+- **agent 模式**（配置了 `agent.command`）：切页、切中文**不会**自动翻译；按 `T` 才按需拉起一次 agent 子进程翻译当前页，完成即退出。按 `B` 或点“一键翻译全书”会按页顺序逐页拉起一次性 agent 补全剩余页，可随时停止；仍然不常驻、空闲不花 token。
 - **API 模式**（有 Key 但没配 agent，或 `--backend api`）：保留自动翻译/预取/后台批翻。
 - **只读模式**（都没有）：阅读正常，按 `T` 返回明确错误。
 
@@ -189,7 +189,7 @@ uv run pdftranslator serve --no-browser      # 默认 http://127.0.0.1:8765/
 | GET | `/api/page?page=6` | 原文与已有译文 |
 | GET | `/api/img?page=6` | 页面 PNG |
 | POST | `/api/translate` | `{"page": 6, "wait": true, "force": false}` 或 `{"pages":[…], "wait": false}` |
-| POST | `/api/batch` | `{"from": 1}` 或 `{"stop": true}`；agent 模式返回 409 |
+| POST | `/api/batch` | `{"from": 1}` 或 `{"stop": true}`；agent 模式按页串行、每页一次一次性 agent |
 
 ## 8. 配置
 

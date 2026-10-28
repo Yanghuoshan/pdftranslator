@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import sys
 import threading
+import time
 from contextlib import contextmanager
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
@@ -169,7 +170,7 @@ def test_api_translate_and_empty_page(book):
         assert status == 400 and body["code"] == "page_out_of_range"
 
 
-def test_agent_mode_no_auto_translate_and_batch_409(book, fake_agent):
+def test_agent_mode_no_auto_translate(book, fake_agent):
     app, store = make_app(book, backend="agent", agent_mode=(fake_agent, "ok"))
     with serve(app) as base:
         status, meta = get_json(base, "/api/meta")
@@ -180,10 +181,6 @@ def test_agent_mode_no_auto_translate_and_batch_409(book, fake_agent):
         status, st = get_json(base, "/api/status")
         assert status == 200
         assert st["auto_translate"] is False
-
-        status, body = post_json(base, "/api/batch", {"from": 1})
-        assert status == 409
-        assert body["code"] == "batch_requires_api"
 
         # 只有显式 POST /api/translate（网页按 T）才拉起一次性 agent
         status, data = post_json(base, "/api/translate", {"page": 2, "wait": True})
@@ -198,6 +195,39 @@ def test_agent_mode_no_auto_translate_and_batch_409(book, fake_agent):
         status, page = get_json(base, "/api/page?page=2")
         assert page["has_zh"] is True
         assert "第 1 段测试译文" in page["zh"]
+
+
+def wait_for(predicate, timeout=30.0):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def test_agent_mode_batch_translates_missing_pages(book, fake_agent):
+    app, store = make_app(book, backend="agent", agent_mode=(fake_agent, "ok"))
+    with serve(app) as base:
+        status, body = post_json(base, "/api/batch", {"from": 1})
+        assert status == 200
+        assert body["started"] is True
+        assert body["mode"] == "agent"
+        assert body["queued"] == 3  # 第 3 页为空页，不在待译列表
+
+        def finished():
+            _, st = get_json(base, "/api/status")
+            return not st["batch"]["running"] and st["translated"] == 3
+
+        assert wait_for(finished)
+        _, st = get_json(base, "/api/status")
+        assert st["batch"]["failed"] == 0
+        assert st["batch"]["total"] == 3
+        assert st["translated_pages"] == [1, 2, 4]
+        for page in (1, 2, 4):
+            rec = store.load_zh(page)
+            assert rec and rec["backend"] == "agent"
+        assert store.load_zh(3) is None
 
 
 def test_agent_failure_falls_back_to_api(book, fake_agent):

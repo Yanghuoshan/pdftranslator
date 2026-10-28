@@ -2,7 +2,8 @@
 """本地 Web 阅读器。
 
 HTTP API 全部使用 1-based 页码。agent 模式下按 T 只拉起一次短命子进程，
-页面切换/切中文不会自动翻译；API 模式保留原有预热/预取/批翻。
+页面切换/切中文不会自动翻译；“一键翻译全书”按页顺序逐页拉起一次性 agent，
+显式触发、可随时停止；API 模式保留原有预热/预取/批翻。
 """
 from __future__ import annotations
 
@@ -285,18 +286,19 @@ class App:
             self.store.save_img(page, self.scale, data)
             return data
 
-    # ---------- API 批翻 ----------
+    # ---------- 批翻（API / agent） ----------
     def batch_status(self) -> dict:
         if not self._batch:
-            return {"running": False, "done": 0, "total": 0, "failed": 0, "mode": self.backend}
+            return {"running": False, "done": 0, "total": 0, "failed": 0,
+                    "current": None, "mode": self.backend}
         return dict(self._batch)
 
     def batch_start(self, from_page: int = 1) -> dict:
-        if self.backend != "api":
+        if self.backend not in ("api", "agent"):
             raise ApiError(
-                409, "batch_requires_api",
-                "agent 模式下不在后台批翻",
-                "整本翻译请在 agent 对话里用 next/save 循环；网页按 T 只翻当前页",
+                409, "batch_unavailable",
+                "没有可用的翻译后端",
+                "在 config.json 配置 agent.command，或设置 TRANSLATE_API_KEY",
             )
         if self._batch and self._batch.get("running"):
             return {"started": False, "reason": "already_running"}
@@ -306,9 +308,9 @@ class App:
             return {"started": False, "reason": "nothing_to_do", "queued": 0}
         self._stop.clear()
         self._batch = {"running": True, "done": 0, "total": len(pages),
-                       "failed": 0, "mode": "api"}
+                       "failed": 0, "current": None, "mode": self.backend}
         threading.Thread(target=self._run_batch, args=(pages,), daemon=True).start()
-        return {"started": True, "queued": len(pages)}
+        return {"started": True, "queued": len(pages), "mode": self.backend}
 
     def batch_stop(self) -> dict:
         self._stop.set()
@@ -317,28 +319,52 @@ class App:
         return {"stopped": True}
 
     def _run_batch(self, pages: list[int]) -> None:
-        concurrency = max(1, int(self.cfg.get("concurrency") or 4))
         try:
-            with ThreadPoolExecutor(max_workers=concurrency) as pool:
-                futures = {pool.submit(self._translate_sync, p, False): p for p in pages}
-                for fut in as_completed(futures):
-                    if self._stop.is_set():
-                        for f in futures:
-                            f.cancel()
-                        break
-                    try:
-                        fut.result()
-                    except Exception as exc:  # noqa: BLE001
-                        self.log_line(f"[batch] 第 {futures[fut]} 页失败: {exc}")
-                        if self._batch:
-                            self._batch["failed"] += 1
-                    finally:
-                        if self._batch:
-                            self._batch["done"] += 1
+            if self.backend == "agent":
+                self._run_batch_agent(pages)
+            else:
+                self._run_batch_api(pages)
         finally:
             if self._batch:
                 self._batch["running"] = False
-            self.log_line("[batch] API 批翻结束")
+                self._batch["current"] = None
+            self.log_line(f"[batch] 翻译结束（{self.backend}）")
+
+    def _run_batch_agent(self, pages: list[int]) -> None:
+        # 串行、每页一次短命子进程；停止后不再启动新进程，当前页会跑完
+        for page in pages:
+            if self._stop.is_set():
+                break
+            if self._batch:
+                self._batch["current"] = page
+            try:
+                self._translate_sync(page, False)
+            except Exception as exc:  # noqa: BLE001
+                self.log_line(f"[batch] 第 {page} 页失败: {exc}")
+                if self._batch:
+                    self._batch["failed"] += 1
+            finally:
+                if self._batch:
+                    self._batch["done"] += 1
+
+    def _run_batch_api(self, pages: list[int]) -> None:
+        concurrency = max(1, int(self.cfg.get("concurrency") or 4))
+        with ThreadPoolExecutor(max_workers=concurrency) as pool:
+            futures = {pool.submit(self._translate_sync, p, False): p for p in pages}
+            for fut in as_completed(futures):
+                if self._stop.is_set():
+                    for f in futures:
+                        f.cancel()
+                    break
+                try:
+                    fut.result()
+                except Exception as exc:  # noqa: BLE001
+                    self.log_line(f"[batch] 第 {futures[fut]} 页失败: {exc}")
+                    if self._batch:
+                        self._batch["failed"] += 1
+                finally:
+                    if self._batch:
+                        self._batch["done"] += 1
 
     # ---------- 预热（仅 API 模式） ----------
     def prewarm(self, count: int | None = None) -> int:

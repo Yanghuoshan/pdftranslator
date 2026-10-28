@@ -33,8 +33,8 @@
 三条翻译路径：
 
 1. **宿主 agent（主路径）**：`next` 取页 → agent 自己翻译 → 写 `draft_path` → `save`。不经过 HTTP，不消耗额外进程。
-2. **网页按 T（agent 模式）**：`POST /api/translate` → `AgentBridge` 在 `agent-run/` 空目录里跑一次性 CLI → 清洗/校验 stdout → 服务端写缓存。
-3. **API 兜底（api 模式）**：`ApiTranslator.translate_paras` → 分块 HTTP 调用 → 清洗/校验 → 写缓存。CLI `batch --api` 与网页批翻都走这条。
+2. **网页按 T（agent 模式）**：`POST /api/translate` → `AgentBridge` 在 `agent-run/` 空目录里跑一次性 CLI → 清洗/校验 stdout → 服务端写缓存。“一键翻译全书”复用这条桥，按页串行补全缺失页，可随时停止。
+3. **API 兜底（api 模式）**：`ApiTranslator.translate_paras` → 分块 HTTP 调用 → 清洗/校验 → 写缓存。CLI `batch --api` 与 API 模式的网页批翻都走这条。
 
 ## 3. 代码地图
 
@@ -236,7 +236,7 @@ HTTP/CLI/缓存文件名 (1-based)
 - **1-based 边界**：CLI/HTTP/缓存文件名 1-based；`Book` 0-based；前端内部 0-based。越界统一用 `_check_page` / `App.validate`。
 - **磁盘为准**：不要只在内存里维护译文；网页/CLI/agent 必须看到同一份磁盘记录。
 - **原子写**：所有状态文件走 `Store` 的原子写；Windows 下 `os.replace` 已有重试。
-- **agent 模式不自动花钱**：`auto_translate = backend == "api"`；agent 模式禁用预取、预热、后台批翻（409）。改 UI 或 server 时不要重新打开自动触发。
+- **agent 模式不自动花钱**：`auto_translate = backend == "api"`；agent 模式禁用预取、预热和自动翻译。“一键翻译全书”只在用户显式点击按钮/按 B 后启动，按页串行、每页一次一次性 agent，可停止；改 UI 或 server 时不要重新打开自动触发。
 - **子进程隔离**：bridge 默认在 `agent-run/` 空目录运行；不要把 cwd 改成项目根，否则子 agent 可能读取 AGENTS.md 并自行调用工具。
 - **安全**：默认只绑 `127.0.0.1`；agent 命令只来自本地配置，绝不接受 HTTP 传入；页码校验；POST 体限制。
 - **Windows**：UTF-8 输出/读文件；`.cmd/.bat` 用 `%COMSPEC%`；子进程 `CREATE_NO_WINDOW`；路径含中文/空格要测。
