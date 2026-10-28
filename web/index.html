@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF 双语阅读器</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header id="topbar">
+  <div id="bookTitle" class="ellipsis">加载中…</div>
+  <div class="grow"></div>
+  <span id="modelTag" class="tag"></span>
+  <button id="langBtn" class="primary">中文 (T)</button>
+  <button id="batchBtn">后台翻译全书 (B)</button>
+  <span id="statusText" class="muted"></span>
+</header>
+<div id="progressWrap"><div id="progressBar"></div></div>
+
+<main id="stage">
+  <button id="prevBtn" class="side" title="上一页 (←)">‹</button>
+  <div id="pageBox">
+    <img id="pageImg" alt="原页">
+    <div id="zhLayer" hidden>
+      <div id="zhCaption"></div>
+      <div id="zhText"></div>
+    </div>
+    <div id="loading" hidden><div class="spinner"></div><span id="loadingText">加载中…</span></div>
+  </div>
+  <button id="nextBtn" class="side" title="下一页 (→)">›</button>
+</main>
+
+<footer id="bottombar">
+  <button id="firstBtn">«</button>
+  <button id="prevBtn2">上一页</button>
+  <input id="pageInput" type="number" min="1" value="1">
+  <span id="pageTotal" class="muted">/ —</span>
+  <button id="nextBtn2">下一页</button>
+  <button id="lastBtn">»</button>
+  <span class="muted hint">← → 翻页 · T 切换中英 · B 全书批翻 · 译文自动落盘</span>
+  <div class="grow"></div>
+  <button id="fontDown" title="缩小字体">A-</button>
+  <button id="fontUp" title="放大字体">A+</button>
+  <button id="retranslateBtn">重译本页</button>
+</footer>
+<script src="/app.js"></script>
+</body>
+</html>

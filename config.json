@@ -1,0 +1,31 @@
+{
+  "provider": "openai",
+  "base_url": "https://api.deepseek.com/v1",
+  "model": "deepseek-chat",
+  "api_key": "",
+  "api_key_env": "TRANSLATE_API_KEY",
+  "temperature": 0.2,
+  "timeout": 180,
+  "max_chars_per_chunk": 1600,
+  "concurrency": 4,
+  "prewarm_pages": 3,
+  "prefetch_next_pages": 0,
+  "render_scale": 2,
+
+  "_说明": "api_key 留空，改用环境变量 export TRANSLATE_API_KEY=sk-xxx（密钥不落盘）。provider 可选 openai(兼容)/anthropic/mock(离线自检)。",
+
+  "books": {
+    "The_Formation_of_Christendom": {
+      "context": "19世纪英国天主教历史学家 T. W. Allies 的《The Formation of Christendom》第二卷，论述罗马帝国晚期到中世纪基督教世界的形成，涉及教会史、教父著作、神学与政治制度。译文请用学术书面语，保留神学术语的惯用译法。",
+      "glossary": {
+        "Christendom": "基督教世界",
+        "Church": "教会",
+        "Holy See": "圣座",
+        "Pope": "教宗",
+        "bishop": "主教",
+        "council": "公会议",
+        "Arian": "阿里乌斯派"
+      }
+    }
+  }
+}

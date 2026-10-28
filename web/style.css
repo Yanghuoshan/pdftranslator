@@ -1,0 +1,138 @@
+:root {
+  --bg: #f3efe9;
+  --paper: #fffdf7;
+  --ink: #2b2620;
+  --muted: #8a8177;
+  --line: #ddd5c8;
+  --accent: #8a5a2b;
+  --ratio: 0.705;
+  --fs: 17px;
+}
+
+* { box-sizing: border-box; }
+
+/* 作者样式里的 display 会盖掉 hidden 属性，必须显式兜底 */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { filter: brightness(1.08); color: #fff; }
+button[disabled] { opacity: .5; cursor: default; }
+
+#topbar, #bottombar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+#bottombar { border-bottom: none; border-top: 1px solid var(--line); }
+.grow { flex: 1; }
+.muted { color: var(--muted); }
+.hint { font-size: 12px; }
+.tag { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#bookTitle { font-weight: 600; max-width: 42vw; }
+
+#progressWrap { height: 3px; background: #ece6dc; }
+#progressBar { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+
+#stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  overflow: hidden;
+  padding: 10px;
+}
+.side {
+  border: none;
+  background: transparent;
+  font-size: 34px;
+  color: var(--muted);
+  padding: 0 6px;
+  line-height: 1;
+}
+.side:hover { color: var(--accent); }
+
+#pageBox {
+  position: relative;
+  background: var(--paper);
+  height: min(calc(100vh - 150px), calc((100vw - 140px) / var(--ratio)));
+  aspect-ratio: var(--ratio);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .14);
+  overflow: hidden;
+}
+#pageImg { width: 100%; height: 100%; display: block; object-fit: contain; background: #fff; }
+
+#zhLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: var(--paper);
+  overflow-y: auto;
+  padding: 5% 7% 8%;
+}
+#zhCaption {
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+#zhText {
+  font-family: "Songti SC", "Source Han Serif SC", "Noto Serif CJK SC", Georgia, serif;
+  font-size: var(--fs);
+  line-height: 1.95;
+  text-align: justify;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+#zhText p { margin: 0 0 .85em; text-indent: 2em; }
+#zhText p:first-child { text-indent: 0; }
+#zhEmpty { color: var(--muted); }
+
+#loading {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 253, 247, .94);
+  color: var(--muted);
+}
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#pageInput { width: 66px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
