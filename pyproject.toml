@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pdf-translator"
+version = "0.2.0"
+description = "Agent-driven bilingual PDF reader: a host agent translates page by page, with an API fallback."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+  "pdfplumber>=0.11.0",
+  "pypdfium2>=4.30.0",
+  "Pillow>=10.0.0",
+  "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+pdftranslator = "pdf_translator.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pdf_translator"]
+
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+include = [
+  "pdf_translator",
+  "examples",
+  "tests",
+  "scripts",
+  "README.md",
+  "AGENTS.md",
+  "OVERVIEW.md",
+  "CLAUDE.md",
+  "config.example.json",
+  "reader.py",
+  "pyproject.toml",
+]
+exclude = [
+  ".cache",
+  "*.pdf",
+  ".gitignore",
+  ".gitattributes",
+  ".github",
+  ".vscode",
+  ".idea",
+  ".pytest_cache",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

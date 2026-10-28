@@ -1,0 +1,50 @@
+{
+  "provider": "openai",
+  "base_url": "https://api.deepseek.com/v1",
+  "model": "deepseek-chat",
+  "api_key": "",
+  "api_key_env": "TRANSLATE_API_KEY",
+  "temperature": 0.2,
+  "timeout": 180,
+  "max_chars_per_chunk": 1600,
+  "concurrency": 4,
+  "prewarm_pages": 3,
+  "prefetch_next_pages": 0,
+  "render_scale": 2,
+
+  "backend": "auto",
+
+  "_backend说明": "auto = 有 agent.command 时用 agent，否则有 API Key 用 API，都没有则只读；也可写 agent 或 api 强制。",
+
+  "agent": {
+    "command": ["claude", "-p", "--output-format", "text"],
+    "prompt_mode": "stdin",
+    "timeout": 180,
+    "max_concurrent": 1,
+    "fallback_to_api": true,
+    "cwd": "",
+    "env": {}
+  },
+
+  "_agent说明": "command 是 argv 数组，绝不拼 shell。Claude Code 用上面默认值；Codex 可写 [\"codex\", \"exec\", \"--skip-git-repo-check\", \"-\"]；任意脚本写 [\"python\", \"path/to/adapter.py\"]。stdin 模式把提示词写入子进程 stdin、从 stdout 读译文；prompt_mode=arg 会替换参数里的 {prompt}，file 会写提示词文件并替换 {prompt_file}。回退 API 设 fallback_to_api=true 并配置 Key。",
+
+  "_api说明": "api_key 留空时依次读环境变量 TRANSLATE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY。provider 可选 openai(兼容)/anthropic/mock。",
+
+  "context": "",
+  "glossary": {},
+
+  "books": {
+    "The_Formation_of_Christendom": {
+      "context": "19世纪英国天主教历史学家 T. W. Allies 的《The Formation of Christendom》第二卷，论述罗马帝国晚期到中世纪基督教世界的形成，涉及教会史、教父著作、神学与政治制度。译文请用学术书面语，保留神学术语的惯用译法。",
+      "glossary": {
+        "Christendom": "基督教世界",
+        "Church": "教会",
+        "Holy See": "圣座",
+        "Pope": "教宗",
+        "bishop": "主教",
+        "council": "公会议",
+        "Arian": "阿里乌斯派"
+      }
+    }
+  }
+}

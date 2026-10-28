@@ -12,7 +12,18 @@
   "prefetch_next_pages": 0,
   "render_scale": 2,
 
-  "_说明": "api_key 留空，改用环境变量 export TRANSLATE_API_KEY=sk-xxx（密钥不落盘）。provider 可选 openai(兼容)/anthropic/mock(离线自检)。",
+  "backend": "auto",
+  "agent": {
+    "command": ["claude", "-p", "--output-format", "text"],
+    "prompt_mode": "stdin",
+    "timeout": 180,
+    "max_concurrent": 1,
+    "fallback_to_api": true,
+    "cwd": "",
+    "env": {}
+  },
+
+  "_说明": "api_key 留空，改用环境变量 export TRANSLATE_API_KEY=sk-xxx（密钥不落盘）。provider 可选 openai(兼容)/anthropic/mock(离线自检)。backend=auto 时优先用 agent.command，不可用再退回 API。",
 
   "books": {
     "The_Formation_of_Christendom": {

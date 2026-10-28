@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""PDF 取文与渲染：按段落切分、去掉页眉页脚、懒渲染原页图片。"""
+"""PDF 取文与渲染。
+
+内部约定：本模块全部使用 **0-based 页索引**（PDF 库的自然索引）。
+CLI / HTTP / 缓存文件名使用 1-based 页码，转换只发生在调用边界。
+"""
 from __future__ import annotations
 
 import io
@@ -27,10 +31,11 @@ class Book:
         self._paras: dict[int, list[str]] = {}
 
     def close(self) -> None:
-        try:
-            self.plumber.close()
-        except Exception:
-            pass
+        for closer in (self.plumber.close, self.fium.close):
+            try:
+                closer()
+            except Exception:
+                pass
 
     def page_size(self, n: int) -> tuple[float, float]:
         p = self.plumber.pages[n]
@@ -54,8 +59,12 @@ class Book:
             self._paras = {i: list(p) for i, p in enumerate(pages)}
 
     def extract_all(self, on_progress=None) -> list[list[str]]:
-        """全本抽取（后台跑），顺带剔除跨页重复的页眉/页脚。"""
-        pages = [self._extract(n) for n in range(self.page_count)]
+        """全本抽取，并剔除跨页重复的页眉/页脚。"""
+        pages = []
+        for n in range(self.page_count):
+            pages.append(self._extract(n))
+            if on_progress:
+                on_progress(n + 1, self.page_count)
         counter: Counter[str] = Counter()
         for paras in pages:
             for p in set(paras):
@@ -67,8 +76,6 @@ class Book:
         with self._lock:
             for i, paras in enumerate(cleaned):
                 self._paras[i] = paras
-        if on_progress:
-            on_progress(self.page_count)
         return cleaned
 
     def _extract(self, n: int) -> list[str]:
